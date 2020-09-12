@@ -1,0 +1,82 @@
+#+TITLE: TwoSum
+#+FILETAGS: :array:hashtable:
+
+* Problem
+** Directions
+#+BEGIN_QUOTE
+Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
+
+You may assume that each input would have exactly one solution, and you may not use the same element twice.
+
+You can return the answer in any order.
+#+END_QUOTE
+
+#+BEGIN_EXAMPLE
+Input: nums = [2,7,11,15], target = 9
+Output: [0,1]
+Output: Because nums[0] + nums[1] == 9, we return [0, 1].
+#+END_EXAMPLE
+
+* Notes
+A brute-force solution is probably too slow, but simple to understand.
+
+The brute-force solution just involves running through each index and checking if
+two numbers add up to the target. This is O(n^2), and the big one to remove is
+the second loop. Hashtables?
+
+* Solution
+A simple way of avoiding lots of lookups is by making O(n) loops a O(1) loop
+and hashtables generally solve this.
+
+A simple solution is by saving the index of each number in the hashtable to quickly
+look up existing numbers in the array in O(1) time. For instance, in the example:
+
+#+BEGIN_SRC python :results value
+nums = [2, 7, 11, 15]
+indices = {}
+for i, num in enumerate(nums):
+   indices[num] = i
+print(indices)
+#+END_SRC
+
+#+RESULTS:
+: {2: 0, 7: 1, 11: 2, 15: 3}
+
+Afterwards, for any potential number in the array, we'll just check to see if there
+is an existing number in the array that can add up the first number to =target=.
+
+This is because =number1 + number2 = target=. While we're iterating with the for loop,
+we're finding =number1=; in that case, =number2 = target - number1=, and we can find
+if =number2= exists by looking through the keys of the =indices= hashtable.
+
+This is =O(n + n) = O(2n) ~ O(n)=.
+
+#+BEGIN_SRC python :tangle twoSum.py
+from typing import List
+
+class Solution:
+    def twoSum(self, nums: List[int], target: int) -> List[int]:
+      indices = {}
+      # for each item, save the index in a hashtable
+      for i, num in enumerate(nums):
+          indices[num] = i
+      for i, num in enumerate(nums):
+          # get the complement
+          complement = target - num;
+          # if it exists in array and is not the same element
+          if complement in indices and indices[complement] != i:
+              return [i, indices[complement]]
+#+END_SRC
+
+Here's it running properly:
+#+BEGIN_SRC python :preamble from twoSum import Solution :results output
+func = Solution()
+nums = [2,7,11,15]
+target = 9
+print(func.twoSum(nums, target))
+#+END_SRC
+
+#+RESULTS:
+: [0, 1]
+
+* Related Problems
