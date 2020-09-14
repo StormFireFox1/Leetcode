@@ -1,0 +1,135 @@
+#+TITLE: Distinct Subsequences
+#+FILETAGS: :string:dynamicprogramming:
+
+* Problem
+** Directions
+#+BEGIN_QUOTE
+Given a string S and a string T, count the number of distinct subsequences of S which equals T.
+
+A subsequence of a string is a new string which is formed from the original string by deleting some (can be none) of the characters without disturbing the relative positions of the remaining characters. (ie, "ACE" is a subsequence of "ABCDE" while "AEC" is not).
+
+It's guaranteed the answer fits on a 32-bit signed integer.
+#+END_QUOTE
+* Insights
+Notice the count of subsequences being dependent on previous potential subsequences of the string.
+This would suggest overlapping subproblems, a typical sign of the requirement of dynamic programming.
+* Solution
+This problem has a simple solution using dynamic programming, which has a decent enough speed.
+
+Essentially, the dynamic part of this algorithm is our attempt of building out more subsequences
+that are dependent on the previous subsequences we've found. This creates a recursion that, while
+difficult to write in code, is intuitive from our perspective.
+
+For starters, we'll just begin by dealing with the edge cases.
+
+** Edge Cases
+In the case that the substring /T/ is longer than the original string /S/, then we can safely
+assume there are no subsequences of /S/ that can compose /T/, since it simply doesn't even
+have enough characters for one occurence of the whole string /T/:
+
+#+BEGIN_SRC python :tangle numDistinct.py
+class Solution:
+    def numDistinct(self, s: str, t: str) -> int:
+        if len(t) > len(s):
+            return 0
+#+END_SRC
+
+Should the strings be of equal length, the only possible subsequence would simply be 1, where
+string /T/ is just the string /S/, so we can account for that basic case as well:
+
+#+BEGIN_SRC python :tangle numDistinct.py
+        if len(t) == len(s):
+            return 1 if t == s else 0
+#+END_SRC
+
+That is all of the basic cases sorted out, now to deal with the actual recursion.
+
+** DP Definition
+
+Consider the multi-dimensional array =dp= filled with zeroes, where the two
+dimensions are equal to the length of /S/ and the length of /T/, respectively.
+This array will contain our recursive formula, and we'll explain why we need
+this array.
+
+#+BEGIN_SRC python :tangle numDistinct.py
+        dp = [[0 for i in range(len(s))] for j in range(len(t))]
+#+END_SRC
+
+Essentially, with this recursion, what we are trying to achieve is to count
+the number of possible ways a substring of /T/ can fit in a different substring
+/S/ as a subsequence, considering additional previous subsequences we've counted.
+
+Therefore, for any =i= and =j= that are in range of =dp=, *=dp[i][j]= is equal
+to the number of distinct subsequences of =t[i:]= equal to the string =s[j:]=.*
+
+Therefore, our final answer is =dp[0][0]=.
+
+We now need the base case and the recursion.
+
+** Base Case
+
+The basic case is easy if taken from the end of the string. In the most basic
+case, our two strings, sliced to the maximum values of =i= and =j=, are
+one character each. Therefore, the amount of subsequences found is just 1, only
+if the characters at the end of the strings are equal.
+
+#+BEGIN_SRC python :tangle numDistinct.py
+        dp[-1][-1] = 1 if s[-1] == t[-1] else 0
+#+END_SRC
+
+Now for the recursion.
+
+** Recursion
+
+When we are iterating through the strings, we're first trying all the possible
+substrings of /T/ in a specific substring of /S/, so that is the order of
+iteration:
+
+#+BEGIN_SRC python :tangle numDistinct.py
+        for i in range(len(t) - 1, -1, -1):
+            for j in range(len(s) - 2, -1, -1):
+                # '-2' is above because we've done the first one as the base case
+#+END_SRC
+
+Now, we are in the middle of the recursion, and looking at two particular
+characters from each string. There are really only two cases:
+
+- If the character =t[i]= is not equal to the character =s[j]=, then that means
+  we have not found an additional distinct subsequence, so we can just copy
+  the previous subsequence count over to the new position we are at.
+
+  #+BEGIN_SRC python :tangle numDistinct.py
+                dp[i][j] = dp[i][j + 1]
+  #+END_SRC
+
+- If the character =t[i]= is equal to the character =s[j]=, then that means we've
+  found an additional distinct subsequence. Therefore, asides from the previous
+  subsequences, we also want to add the count of all the subsequences for the
+  previous slice of =s=, since we can create distinct subsequences with all of those
+  by adding a new letter at the beginning of them.[fn:1]
+
+  #+BEGIN_SRC python :tangle numDistinct.py
+                # special case for bottom row
+                if t[i] == s[j] and i == len(t) - 1:
+                    dp[i][j] += 1
+
+                # general case
+                elif t[i] == s[j]:
+                    dp[i][j] += dp[i + 1][j + 1]
+  #+END_SRC
+
+That's it, we're done. We just have to return the solution now:
+
+#+BEGIN_SRC python :tangle numDistinct.py
+                return dp[0][0]
+#+END_SRC
+
+/Time Complexity:/ $O(n * m)$, where /n/ and /m/ are the lengths of the string
+
+[fn:1] We'll need to add the additional edge case of the bottom row of the array as well,
+as that ends up being out of bounds with the original formula. To fix that, we
+just add 1 to the current count, as in that case, we're essentially adding the
+one additional subsequence that is possible, which is the letter appended to the
+only 1 sequence from the base case.
+* Credits
+- Alistair Gray for providing the solution of the problem and being a good tutor.

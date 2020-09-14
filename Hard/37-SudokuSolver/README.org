@@ -1,0 +1,145 @@
+#+TITLE: Sudoku Solver
+#+FILETAGS: :hashtable:backtracking:
+
+* Problem
+** Directions
+#+BEGIN_QUOTE
+Write a program to solve a Sudoku puzzle by filling the empty cells.
+
+A sudoku solution must satisfy all of the following rules:
+
+    Each of the digits 1-9 must occur exactly once in each row.
+    Each of the digits 1-9 must occur exactly once in each column.
+    Each of the the digits 1-9 must occur exactly once in each of the 9 3x3 sub-boxes of the grid.
+
+Empty cells are indicated by the character '.'.
+#+END_QUOTE
+
+* Insights
+There is only one possible solution for any given Sudoku board.
+* Solution
+Since there is only one solution available for any given Sudoku board, we'll
+need to essentially iterate through every possible combination of numbers to fit
+into the Sudoku board, check whether the board is currently valid, and then
+create a recursion until we've reached a filled board.
+
+Since we're dealing with a recursion on valid boards, the best solution is a
+backtracking-based solution; backtracking allows us to 'hone in' on a proper
+board by generating a depth-first search of the solution board.  Essentially,
+whenever we find an invalid board, we'll go one step back and try other
+combinations.
+
+For backtracking we need the following components:
+- possible value to enter recursion for (numbers we can fit in a specific square)
+- a valid condition (there are still possibilities of numbers to put in empty square)
+
+Before we keep going, we'll declare the stuff Leetcode needs. We'll also quickly
+declare the solution function. This function also needs to put the solved board in-place
+of the function parameter as well, so we'll do that after we call our own =solve= function.
+#+BEGIN_SRC python :tangle solveSudoku.py
+from typing import List
+
+
+class Solution:
+    def solveSudoku(self, board: List[List[str]]) -> None:
+        self.board = board
+
+        self.solve()
+
+        for i in range(0, 9):
+            for j in range(0, 9):
+                board[i][j] = self.board[i][j]
+#+END_SRC
+
+We'll begin by creating the function to check for the possible numbers to put in
+a board at any given coordinate.
+
+** Number Possibilities in One Square
+
+Sudoku has three conditions for every given cell on the board:
+- number in cell is unique across row
+- number in cell is unique across column
+- number in cell is unique in current block
+
+Last one is hardest, because we need to split the board in 3x3 sub-boxes.
+
+Essentially, our function that checks for the possibilities can just make an array
+of numbers from 1 to 9, then remove any occurrences of numbers on the same row, column
+or sub-box.
+
+For the numbers in the same box, we're looking to find an easy way to iterate through those
+as well. To do that, we'll be splitting the sub-box coordinates depending on our current coordinate.
+
+Here's how we'll be splitting our sub-boxes for the Sudoku layout:
+#+CAPTION: Figure of Sudoku sub-box counts
+#+NAME: sudoku-sub-box-layout
+[[./images/sudoku-sub-box.png]]
+
+Essentially, we're doing integer division on the row and column of the current
+coordinate to find the "(0,0)" of the current sub-box, as evidenced by the cell
+with the number "0". Afterwards, we iterate row by row through the cells.
+
+To find the (0,0), we need =(X_OR_Y // 3) * 3=: the =row // 3= finds the specific sub-box we're in
+by grouping up the smaller numbers. (i.e. =[0, 1, 2]= end up correlating with sub-box =0=)
+
+As for the internal number, we'll need two formulae. For cell =i=:
+- x-coordinate is =x + i // 3=, where $x$ is the formula from above
+- y-coordinate is =y + i % 3=, where $y$ is the formula from above
+
+Now that we've got all the coordinates, this is what it ends up looking like:
+#+BEGIN_SRC python :tangle solveSudoku.py
+    def possibilities(self, row, col):
+        possible = {str(i) for i in range(1, 10)}
+
+        big_row = (row // 3) * 3;
+        big_col = (col // 3) * 3;
+
+        for i in range(9):
+            # Row
+            if self.board[row][i] in possible:
+                possible.remove(self.board[row][i])
+            # Column
+            if self.board[i][col] in possible:
+                possible.remove(self.board[i][col])
+            if self.board[big_row + i // 3][big_col + i % 3] in possible:
+                possible.remove(self.board[big_row + i // 3][big_col + i % 3])
+
+        return possible
+#+END_SRC
+
+Now we'll construct the recursive solve function.
+
+** Recursive Solve Function
+
+This function will do the following:
+- go through each empty square
+- if the current square we've picked has no possibilities of numbers to put in, it means we've found
+  an invalid board, so we'll backtrack. (Point A)
+- if there are possibilities, add them in and go through the recursion again. If by any chance
+  the recursion ends up returning as invalid, we'll empty out the cell.[fn:1]
+- eventually, we'll have a full board, and if we do, we're done.
+
+#+BEGIN_SRC python :tangle solveSudoku.py
+    def solve(self):
+        for i in range(9):
+            for j in range(9):
+                if self.board[i][j] == ".":
+                    for value in self.possibilities(i, j):
+                        self.board[i][j] = value
+                        if self.solve():
+                            return True
+                        self.board[i][j] = "."
+                    return False  # Point A
+        return True
+#+END_SRC
+
+That's it!
+
+/Time Complexity/: $O(9^{n})$, where /n/ is the number of empty cells in the board.
+
+[fn:1]: The emptying out ends up being the case if and only if =solve= returns False, which happens
+only at Point A, if there are no possibilities to put into the cell, which is the only case a board
+is invalid. Pretty smart!
+
+* Credits
+- Alistair Gray for providing the solution of the problem and being a good tutor.
