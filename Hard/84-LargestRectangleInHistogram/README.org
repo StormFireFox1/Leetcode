@@ -1,0 +1,116 @@
+#+TITLE: Largest Rectangle in Histogram
+#+FILETAGS: :array:stack:
+
+* Problem
+** Directions
+#+BEGIN_QUOTE
+Given n non-negative integers representing the histogram's bar height where the width of each bar is 1, find the area of largest rectangle in the histogram.
+#+END_QUOTE
+
+* Notes
+We are looking to prioritize smaller bars for the beginning of our rectangle,
+since they provide multiple chances of continuing to expand the width of the
+rectangle.
+
+A naive solution would involve keeping a stack that adds ascending buildings
+from the provided histogram, popping whenever we find buildings in the stack
+higher than the current one; during the removal, we ensured to keep the maximum
+area if found. This solution is an $O(n^2)$ solution, but there can be
+optimizations placed here.
+
+This can be achieved in $O(n)$ using dynamic programming, the hint relying on
+the idea that the stack-based solution is looking for the closest highest
+rectangles to the one we are currently at. We can skip that look-up by doing
+some recalculation.
+* Solution
+In general, if we are looking at any bar /i/ in the histogram, we are looking
+for its closest neighboring bars that are higher or the same height as bar /i/.
+If we pre-process these values by iterating through the lists, we achieve a
+solution using $O(n)$ time complexity.
+
+We do a bunch of pre-processing, by holding two arrays:
+- =lower_lefts=: list of indices for the closest bar to the left of bar /i/ that is lower height than /i/
+- =lower_rights=: list of indices for the closest bar to the right of bar /i/ that is lower height than /i/
+
+The pre-processing for these would normally still take $O(n^2)$ unless we made
+one critical observation, which is that if we found an index for
+=lower_lefts[i + 1]=, the index for =lower_lefts[i]= will be the same if it's a
+higher height bar than bar /i + 1/[fn:1]. Let's start with all the actual code.
+
+[fn:1] This is logical, as the bar /i/ will share the minimum of bar /i + 1/.
+** Pre-Processing
+
+We'll begin by writing out the classic Leetcode niceties and declaring the
+necessary pre-processing arrays. These will be of equal size to the original
+array; however, the edges for each will have special cases:
+
+- =lower_lefts=' first value will be =-1= as the first bar's closest left neighbor is non-existent, so the index is the first to the left of bar =0=.
+- =lower_rights=' last value will be =len(heights)=, as the last bar's closest right neighbor is non-existent, so the index is the first to the right of bar =len(heights) - 1=.
+
+#+BEGIN_SRC python :tangle largestRectangle.py
+from typing import List
+
+class Solution:
+    def largestRectangleArea(self, heights: List[int]) -> int:
+        lower_lefts = [-1] + [0] * (len(heights) - 1)
+        lower_rights = [0] * (len(heights) - 1) + [len(heights)]
+#+END_SRC
+
+Now for the pre-processing. We'll start with =lower_lefts=. For that array,
+we'll go from left to right from the second bar:
+
+#+BEGIN_SRC python :tangle largestRectangle.py
+        for i in range(1, len(heights)):
+            minNeighbor = i - 1
+#+END_SRC
+
+We'll check to see if any of the bars before the current one have a height
+bigger than ours, in which case we can set that as the new minimum we found:
+
+#+BEGIN_SRC python :tangle largestRectangle.py
+            while minNeighbor >= 0 and heights[minNeighbor] >= heights[i]:
+                minNeighbor = lower_lefts[minNeighbor]
+            lower_lefts[i] = minNeighbor
+#+END_SRC
+
+Similarly, we'll do the same thing with =lower_rights=, except we'll be iterating
+from the right to the left and making sure the initial index of =minNeighbor= is
+adjusted properly.
+
+#+BEGIN_SRC python :tangle largestRectangle.py
+        for i in range(len(heights) - 2, -1, -1):
+            minNeighbor = i + 1
+            while minNeighbor < len(heights) and heights[minNeighbor] >= heights[i]:
+                minNeighbor = lower_rights[minNeighbor]
+            lower_rights[i] = minNeighbor
+#+END_SRC
+
+Now that the pre-processing is complete, we can begin calculating the maximum area
+requested by the problem.
+
+** Maximum Area
+
+The easiest way to find the closest bars with higher or the same height as said
+bar /i/, which will define the width of the largest rectangle to include any given
+bar /i/, is by finding the closest bar with a smaller height and then pick the
+one right before that one, closest to bar /i/. Therefore, the width of the largest
+rectangle containing the current bar /i/ is =lower_rights[i] - lower_lefts[i] - 1=.
+
+Therefore, the maximum area requested by the problem is just the maximum of all the
+maximum rectangles possible with each bar in the histogram. We'll just iterate over
+each of the bars and run the formula, save the maximum, and return it.
+
+#+BEGIN_SRC python :tangle largestRectangle.py
+        maxArea = 0
+        for i in range(len(heights)):
+            maxArea = max(maxArea, heights[i] * (lower_rights[i] - lower_lefts[i] - 1))
+        return maxArea
+#+END_SRC
+
+Done!
+
+/Time Complexity:/ $O(n)$, as we're iterating over the original provided array 3 times
+with no internal loops.
+
+* Credits
+- Gideon Tong for providing the solution and a thorough explanation
