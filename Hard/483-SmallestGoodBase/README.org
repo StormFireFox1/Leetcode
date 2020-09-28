@@ -96,7 +96,7 @@ on the sides of the fraction for readability and moved the denominator to /n/,
 so this code will verify if:
 
 \begin{equation}
-k^(m+1) - 1 = n \cdot (k - 1)
+k^{(m+1)} - 1 = n \cdot (k - 1)
 \end{equation}
 
 If that is the case, return the good base we have just found.
